@@ -34,7 +34,7 @@ public class ConnectionFactory {
       new ConnectionPool(20, 300, TimeUnit.SECONDS);
 
   private static final OkHttpClient client = new OkHttpClient.Builder()
-      //.proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 1080)))
+      .proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 1080)))
       .followSslRedirects(false)
       .followRedirects(false)
       .connectTimeout(5000, TimeUnit.MILLISECONDS)
