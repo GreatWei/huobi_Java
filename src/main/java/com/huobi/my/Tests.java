@@ -25,13 +25,14 @@ public class Tests {
         MarketClient marketClient = MarketClient.create(new HuobiOptions());
 
         String symbol = "btcusdt";
-//        marketClient.subCandlestick(SubCandlestickRequest.builder()
-//                .symbol(symbol)
-//                .interval(CandlestickIntervalEnum.MIN1)
-//                .build(), (candlestick) -> {
-//
-//            System.out.println(candlestick.toString());
-//        });
+        marketClient.subCandlestick(SubCandlestickRequest.builder()
+                .symbol(symbol)
+                .interval(CandlestickIntervalEnum.MIN1)
+                .build(), (candlestick) -> {
+
+            System.out.println(candlestick.toString());
+        });
+
     }
 
 }
