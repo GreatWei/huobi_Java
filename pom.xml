@@ -69,6 +69,12 @@
       <version>1.2.0</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/com.tictactec/ta-lib -->
+    <dependency>
+      <groupId>com.tictactec</groupId>
+      <artifactId>ta-lib</artifactId>
+      <version>0.4.0</version>
+    </dependency>
 
   </dependencies>
 
