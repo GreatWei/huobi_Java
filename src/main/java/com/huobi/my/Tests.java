@@ -13,20 +13,23 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.*;
-
+/**
+ *
+ *
+ *
+ * ps -aux | grep "huobi-client-2.0.3-SNAPSHOT.jar"
+ * ps -aux | grep robot
+ *
+ * nohup java -jar huobi-client-2.0.3-SNAPSHOT.jar &
+ *
+ *
+ *
+ * */
 @Slf4j
 public class Tests {
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) {
         GenericClient genericService = GenericClient.create(HuobiOptions.builder().build());
-//        for(int i=0;i<10;i++){
-//            System.out.println(i);
-//            long startTime = System.currentTimeMillis();
-//            Long serverTime = genericService.getTimestamp();
-//            System.out.println("server time:" + serverTime);
-//            SimpleDateFormat format =  new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//            System.out.println("server time:" + format.format(serverTime));
-//            System.out.println(System.currentTimeMillis()-startTime);
-//        }
+
 
         AtomicReference<BigDecimal> lastPrice = new AtomicReference<BigDecimal>(new BigDecimal(0.000000));
         AtomicReference<BigDecimal> profit = new AtomicReference<BigDecimal>(new BigDecimal(0.000000));
@@ -60,7 +63,7 @@ public class Tests {
             Long inputTime = marketTradeEvent.getTs();
             LinkedList<BigDecimal> input = new LinkedList<BigDecimal>();
             LinkedList<Long> blockTime = new LinkedList<Long>();
-            Long interarrivalTime = 3000L;
+            Long interarrivalTime = 4000L;
             for (MarketTrade marketTrade : marketTradeEvent.getList()) {
                 input.offer(marketTrade.getPrice());
                 blockTime.offer(marketTrade.getTs());
@@ -78,28 +81,31 @@ public class Tests {
                 if (min.compareTo(marketTrade.getPrice()) >= 0) {
                     min = marketTrade.getPrice();
                 }
+               //   System.err.println(marketTrade.toString());
             }
             BigDecimal averagePrice = average_price(input, inputTime, blockTime, interarrivalTime, priceQueue, priceTime);
-            System.err.println("min:"+min+", averagePrice"+averagePrice);
+         //   log.error("min:" + min + ", averagePrice:" + averagePrice);
             //    System.err.println(min);
-            if (count.get() > 0 && !signal.get()) {
+            if (count.get() > 0 && !signal.get() && min.compareTo(averagePrice) > 0) {
                 lastPrice.set(min);
                 log.error("买入：" + min);
                 signal.set(true);
-            } else if (count.get() < 0 && signal.get()) {
+                log.error("min:" + min + ", averagePrice:" + averagePrice);
+            } else if (count.get() < 0 && signal.get() && min.compareTo(averagePrice) < 0) {
                 log.error("卖出：" + min);
                 profit.set(profit.get().add(min.subtract(lastPrice.get())));
                 log.error("盈利：" + profit.get());
                 signal.set(false);
+                log.error("min:" + min + ", averagePrice:" + averagePrice);
             }
             //  System.out.println(simpleDateFormat2.format(date2)+" "+"count:"+count.get()+" countVol:");
             //   System.out.println("-----------------------------");
         });
     }
 
-    public static BigDecimal average_price(LinkedList<BigDecimal> input, Long inputTime, LinkedList<Long> blockTime, Long interarrivalTime, AtomicReference<LinkedList<BigDecimal>> priceQueue, AtomicReference<LinkedList<Long>> priceTime) {
+    public synchronized static BigDecimal average_price(LinkedList<BigDecimal> input, Long inputTime, LinkedList<Long> blockTime, Long interarrivalTime, AtomicReference<LinkedList<BigDecimal>> priceQueue, AtomicReference<LinkedList<Long>> priceTime) {
 
-        if (priceQueue.get().peek() == null) {
+        if (priceQueue.get() == null || (priceQueue.get().peek() == null)) {
             priceQueue.set(input);
             priceTime.set(blockTime);
             int N = 0;
@@ -108,7 +114,7 @@ public class Tests {
                 N++;
                 sum = sum.add(price);
             }
-            return sum.divide(new BigDecimal(N));
+            return sum.divide(new BigDecimal(N==0?1:N), 2, BigDecimal.ROUND_UP);
         } else {
             LinkedList<Long> time = priceTime.get();
             LinkedList<BigDecimal> price = priceQueue.get();
@@ -118,9 +124,14 @@ public class Tests {
 
             while (true) {
                 Long tmp = time.peek();
+                if(tmp==null){
+                    time.poll();
+                    price.poll();
+                    continue;
+                }
                 if ((tmp + interarrivalTime) < inputTime) {
-                    time.removeFirst();
-                    price.removeFirst();
+                    time.poll();
+                    price.poll();
                 } else {
                     break;
                 }
@@ -131,7 +142,7 @@ public class Tests {
                 N++;
                 sum = sum.add(tmp);
             }
-            return sum.divide(new BigDecimal(N));
+            return sum.divide(new BigDecimal(N==0?1:N), 2, BigDecimal.ROUND_UP);
         }
     }
 
