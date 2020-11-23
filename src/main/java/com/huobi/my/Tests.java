@@ -35,10 +35,11 @@ public class Tests {
         AtomicReference<BigDecimal> profit = new AtomicReference<BigDecimal>(new BigDecimal(0.000000));
         AtomicInteger count = new AtomicInteger(-30);
         AtomicBoolean signal = new AtomicBoolean(false);
-
-        AtomicReference<LinkedList<BigDecimal>> priceQueue = new AtomicReference<LinkedList<BigDecimal>>();
+        final  BigDecimal service_charge = new BigDecimal("0.002");
+        AtomicReference<LinkedList<BigDecimal>> price_amountQueue = new AtomicReference<LinkedList<BigDecimal>>();
         AtomicReference<LinkedList<Long>> priceTime = new AtomicReference<LinkedList<Long>>();
-
+        AtomicReference<LinkedList<BigDecimal>> amountTotal = new AtomicReference<LinkedList<BigDecimal>>();
+        final long SystemTime = System.currentTimeMillis();
         MarketClient marketClient = MarketClient.create(new HuobiOptions());
         Date date = new Date();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS");
@@ -63,10 +64,12 @@ public class Tests {
             Long inputTime = marketTradeEvent.getTs();
             LinkedList<BigDecimal> input = new LinkedList<BigDecimal>();
             LinkedList<Long> blockTime = new LinkedList<Long>();
-            Long interarrivalTime = 4000L;
+            LinkedList<BigDecimal> amount = new LinkedList<BigDecimal>();
+            Long interarrivalTime = 120000L;
             for (MarketTrade marketTrade : marketTradeEvent.getList()) {
-                input.offer(marketTrade.getPrice());
+                input.offer(marketTrade.getPrice().multiply(marketTrade.getAmount()));
                 blockTime.offer(marketTrade.getTs());
+                amount.offer(marketTrade.getAmount());
                 if ("sell".equals(marketTrade.getDirection())) {
                     int p = count.decrementAndGet();
                     if (p < -100) {
@@ -83,18 +86,18 @@ public class Tests {
                 }
                //   System.err.println(marketTrade.toString());
             }
-            BigDecimal averagePrice = average_price(input, inputTime, blockTime, interarrivalTime, priceQueue, priceTime);
-         //   log.error("min:" + min + ", averagePrice:" + averagePrice);
+            BigDecimal averagePrice = average_price(amount,input, inputTime, blockTime, interarrivalTime, price_amountQueue, priceTime,amountTotal);
+         //   log.error("min:" + min + ", averagePrice:" + averagePrice+","+((inputTime-SystemTime)>=interarrivalTime));
             //    System.err.println(min);
-            if (count.get() > 0 && !signal.get() && min.compareTo(averagePrice) > 0) {
+            if (count.get() > 0 && !signal.get() && min.compareTo(averagePrice) > 0&&(inputTime-SystemTime)>=interarrivalTime) {
                 lastPrice.set(min);
                 log.error("买入：" + min);
                 signal.set(true);
                 log.error("min:" + min + ", averagePrice:" + averagePrice);
             } else if (count.get() < 0 && signal.get() && min.compareTo(averagePrice) < 0) {
                 log.error("卖出：" + min);
-                profit.set(profit.get().add(min.subtract(lastPrice.get())));
-                log.error("盈利：" + profit.get());
+                profit.set(profit.get().add(min.subtract(lastPrice.get()).subtract(lastPrice.get().multiply(service_charge)).subtract(min.multiply(service_charge))));
+                log.error("总盈利：" + profit.get());
                 signal.set(false);
                 log.error("min:" + min + ", averagePrice:" + averagePrice);
             }
@@ -103,46 +106,57 @@ public class Tests {
         });
     }
 
-    public synchronized static BigDecimal average_price(LinkedList<BigDecimal> input, Long inputTime, LinkedList<Long> blockTime, Long interarrivalTime, AtomicReference<LinkedList<BigDecimal>> priceQueue, AtomicReference<LinkedList<Long>> priceTime) {
+    public synchronized static BigDecimal average_price(LinkedList<BigDecimal> amount,LinkedList<BigDecimal> input, Long inputTime, LinkedList<Long> blockTime, Long interarrivalTime, AtomicReference<LinkedList<BigDecimal>> price_amountQueue, AtomicReference<LinkedList<Long>> priceTime, AtomicReference<LinkedList<BigDecimal>> amountTotal) {
 
-        if (priceQueue.get() == null || (priceQueue.get().peek() == null)) {
-            priceQueue.set(input);
+        if (price_amountQueue.get() == null || (price_amountQueue.get().peek() == null)) {
+            price_amountQueue.set(input);
             priceTime.set(blockTime);
-            int N = 0;
+            amountTotal.set(amount);
+
             BigDecimal sum = new BigDecimal("0.0");
             for (BigDecimal price : input) {
-                N++;
                 sum = sum.add(price);
             }
-            return sum.divide(new BigDecimal(N==0?1:N), 2, BigDecimal.ROUND_UP);
+            BigDecimal N = new BigDecimal("0.0");
+            for (BigDecimal price : amount) {
+                N = N.add(price);
+            }
+            return sum.divide(N, 2, BigDecimal.ROUND_UP);
         } else {
             LinkedList<Long> time = priceTime.get();
-            LinkedList<BigDecimal> price = priceQueue.get();
-
+            LinkedList<BigDecimal> price = price_amountQueue.get();
+            LinkedList<BigDecimal> amountT= amountTotal.get();
             price.addAll(input);
             time.addAll(blockTime);
-
+            amountT.addAll(amount);
             while (true) {
                 Long tmp = time.peek();
                 if(tmp==null){
                     time.poll();
                     price.poll();
+                    amountT.poll();
                     continue;
                 }
                 if ((tmp + interarrivalTime) < inputTime) {
                     time.poll();
                     price.poll();
+                    amountT.poll();
                 } else {
                     break;
                 }
             }
             BigDecimal sum = new BigDecimal("0.0");
-            int N = 0;
+
             for (BigDecimal tmp : price) {
-                N++;
+
                 sum = sum.add(tmp);
             }
-            return sum.divide(new BigDecimal(N==0?1:N), 2, BigDecimal.ROUND_UP);
+
+            BigDecimal N = new BigDecimal("0.0");
+            for (BigDecimal tmp : amountT) {
+                N = N.add(tmp);
+            }
+            return sum.divide(N, 2, BigDecimal.ROUND_UP);
         }
     }
 
