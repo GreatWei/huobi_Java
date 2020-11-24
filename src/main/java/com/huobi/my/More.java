@@ -70,9 +70,11 @@ public class More {
                         min = min.min(marketTradeList.get(i).getPrice());
                     }
                 }
-                log.error("buy:" + min);
-                buy = min;
-                single = false;
+                if ((k_day.getHigh().multiply(service_charge).add(min.multiply(service_charge)).add(min)).compareTo(k_day.getHigh()) <= 0) {
+                    log.error("buy:" + min);
+                    buy = min;
+                    single = false;
+                }
             } else if (!single && MA10 > MA5) {
                 List<MarketTrade> marketTradeList = marketClient.getMarketTrade(MarketTradeRequest.builder().symbol(symbol).build());
                 for (int i = 0; i < marketTradeList.size(); i++) {
