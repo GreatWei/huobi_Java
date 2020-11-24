@@ -379,7 +379,9 @@ public class DataFactor {
     List<Double> _sma(List<Double> S, int period) {
         List<Double> R = new ArrayList<Double>(S.size());
         int j = _skip(S, period);
+        _zeros(R,S.size());
         _set(R, 0, j, Double.NaN);
+
         if (j < S.size()) {
             double sum = 0;
             for (int i = j; i < S.size(); i++) {

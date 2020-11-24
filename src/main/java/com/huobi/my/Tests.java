@@ -2,8 +2,10 @@ package com.huobi.my;
 
 import com.huobi.client.GenericClient;
 import com.huobi.client.MarketClient;
+import com.huobi.client.req.market.SubCandlestickRequest;
 import com.huobi.client.req.market.SubMarketTradeRequest;
 import com.huobi.constant.HuobiOptions;
+import com.huobi.constant.enums.CandlestickIntervalEnum;
 import com.huobi.model.market.MarketTrade;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,7 +29,7 @@ import java.util.concurrent.atomic.*;
  * */
 @Slf4j
 public class Tests {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         GenericClient genericService = GenericClient.create(HuobiOptions.builder().build());
 
 
@@ -41,19 +43,29 @@ public class Tests {
         AtomicReference<LinkedList<BigDecimal>> amountTotal = new AtomicReference<LinkedList<BigDecimal>>();
         final long SystemTime = System.currentTimeMillis();
         MarketClient marketClient = MarketClient.create(new HuobiOptions());
+        MarketClient marketClient15 = MarketClient.create(new HuobiOptions());
         Date date = new Date();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS");
 //        date.setTime(time);
 //        System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS").format(date));date
         String symbol = "btcusdt";
-//        marketClient.subCandlestick(SubCandlestickRequest.builder()
-//                .symbol(symbol)
-//                .interval(CandlestickIntervalEnum.MIN1)
-//                .build(), (candlestick) -> {
-//            date.setTime(candlestick.getTs());
-//            System.out.println(simpleDateFormat.format(date)+" "+candlestick.toString());
-//            System.out.println("===========================");
-//        });
+        marketClient.subCandlestick(SubCandlestickRequest.builder()
+                .symbol(symbol)
+                .interval(CandlestickIntervalEnum.DAY1)
+                .build(), (candlestick) -> {
+            date.setTime(candlestick.getTs());
+            System.out.println(simpleDateFormat.format(date)+" "+candlestick.toString());
+            System.out.println("===========================");
+        });
+
+        marketClient15.subCandlestick(SubCandlestickRequest.builder()
+                .symbol(symbol)
+                .interval(CandlestickIntervalEnum.MIN15)
+                .build(), (candlestick) -> {
+            date.setTime(candlestick.getTs());
+            System.out.println(simpleDateFormat.format(date)+" "+candlestick.toString());
+            System.out.println("===========================");
+        });
         MarketClient marketClient1 = MarketClient.create(new HuobiOptions());
         Date date2 = new Date();
         SimpleDateFormat simpleDateFormat2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS");
@@ -84,11 +96,11 @@ public class Tests {
                 if (min.compareTo(marketTrade.getPrice()) >= 0) {
                     min = marketTrade.getPrice();
                 }
-               //   System.err.println(marketTrade.toString());
+                //  System.err.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"+marketTrade.toString());
             }
             BigDecimal averagePrice = average_price(amount,input, inputTime, blockTime, interarrivalTime, price_amountQueue, priceTime,amountTotal);
          //   log.error("min:" + min + ", averagePrice:" + averagePrice+","+((inputTime-SystemTime)>=interarrivalTime));
-            //    System.err.println(min);
+         //       System.err.println(min);
             if (count.get() > 0 && !signal.get() && min.compareTo(averagePrice) > 0&&(inputTime-SystemTime)>=interarrivalTime) {
                 lastPrice.set(min);
                 log.error("买入：" + min);
@@ -104,6 +116,8 @@ public class Tests {
             //  System.out.println(simpleDateFormat2.format(date2)+" "+"count:"+count.get()+" countVol:");
             //   System.out.println("-----------------------------");
         });
+
+
     }
 
     public synchronized static BigDecimal average_price(LinkedList<BigDecimal> amount,LinkedList<BigDecimal> input, Long inputTime, LinkedList<Long> blockTime, Long interarrivalTime, AtomicReference<LinkedList<BigDecimal>> price_amountQueue, AtomicReference<LinkedList<Long>> priceTime, AtomicReference<LinkedList<BigDecimal>> amountTotal) {
