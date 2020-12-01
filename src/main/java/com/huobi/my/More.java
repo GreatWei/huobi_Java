@@ -50,7 +50,7 @@ public class More {
                 List<Candlestick> listMIN15 = marketClient.getCandlestick(CandlestickRequest.builder()
                         .symbol(symbol)
                         .interval(CandlestickIntervalEnum.MIN15)
-                        .size(20)
+                        .size(50)
                         .build());
                 List<Candlestick> listDAY1 = marketClient.getCandlestick(CandlestickRequest.builder()
                         .symbol(symbol)
