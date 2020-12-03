@@ -100,7 +100,7 @@ public class More {
                 if ((endTime - startTime) > 100) {
                     continue;
                 } else {
-                    Thread.sleep(endTime - startTime);
+                    Thread.sleep(100-(endTime - startTime));
                 }
             }catch (Exception e){
                 log.error("Exception: "+e.toString());
